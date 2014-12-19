@@ -251,7 +251,7 @@ class UnInstanceObjs(CheckMayaAbstract):
 class CheckIfEndNumbers(CheckMayaAbstract):
 	"""@brief Check for unknown nodes.
 	"""
-	_name = "check if PRP_ ends with _###"
+	_name = "check if PRP_ ends with _###."
 	_category = "Scene"
 
 	_asSelection = True
@@ -295,7 +295,7 @@ class CheckIfEndNumbers(CheckMayaAbstract):
 		"""
 		select(self.errorNodes)
 		
-'''
+# '''
 class CheckUniqueNames(CheckMayaAbstract):
 	"""@brief Check for unknown nodes.
 	"""
@@ -310,9 +310,10 @@ class CheckUniqueNames(CheckMayaAbstract):
 		"""
 		ListNonUniqueObjs= []
 		objs = [x for x in cmds.ls(shortNames=True,typ ='locator') if '|' in x]
+		# objs = [x.replace(x.split('|')[-1],"")[:-1] for x in cmds.ls(shortNames=True,typ ='locator') if '|' in x]
 		objs.sort(key=lambda x : x.count('|'))
 		objs.reverse()
-			
+		# print objs
 		self.errorNodes = objs
 		if not objs:
 			self.status = "OK"
@@ -326,23 +327,78 @@ class CheckUniqueNames(CheckMayaAbstract):
 		"""
 		# for i in self.errorNodes:
 		objs = self.errorNodes
-		for i in range(len(objs)):
-			if objs[i].split('|')[-2].split("_")[-1].isdigit():
-				try:
-					cmds.rename(objs[i], objs[i].split('|')[-1][:-4]+"_"+"%03d" %(i+1))
-					print objs[i]
-				except:
-					print 'Could not rename ' + str(objs[i]) + ' without errors!'
-			else:
-				try:
-					cmds.rename(objs[i], objs[i].split('|')[-1]+"_"+"%03d" %(i+1))
-					print objs[i]
-				except:
-					print 'Could not rename ' + str(objs[i]) + ' without errors!'
+		if objs:
+			for i in range(len(objs)):
+				print objs[i]
+				objsShort = [x.split('|')[-2] for x in objs]
+				NameWithoutDigit = [x.replace(x.split('_')[-1],"") for x in set(objsShort) if x.split('_')[-1].isdigit() ]
+				# print NameWithoutDigit
+			for i in range(len(NameWithoutDigit)):
+				print NameWithoutDigit[i]
+				#all props startswith NameWithoutDigit
+				ListObjectsFromNonUnique =[x for x in cmds.ls(l=True,typ ='locator') if x.split('|')[-2].startswith(NameWithoutDigit[i])]
+				# print ListObjectsFromNonUnique
+				print 50*"*"
+				for i in range(len(ListObjectsFromNonUnique)):
+					# print i
+					digits = ListObjectsFromNonUnique[i].split('|')[-2].split('_')[-1]
+					digits4= "%04d"%(int(digits))
+					# print str(digits4) +"  >>>  " + "%04d"%(i+1)
+					print ListObjectsFromNonUnique[i] + "  >>>>  " +ListObjectsFromNonUnique[i].split('|')[-2].replace(ListObjectsFromNonUnique[i].split('|')[-2].split('_')[-1],"")+ "%03d"%(i+1)
+					cmds.rename(ListObjectsFromNonUnique[i].replace(ListObjectsFromNonUnique[i].split('|')[-1],""), ListObjectsFromNonUnique[i].split('|')[-2].replace(ListObjectsFromNonUnique[i].split('|')[-2].split('_')[-1],"")+ "%03d"%(i+1))
 		self.run()
 		
 	def select(self):
 		"""@brief Select the error nodes.
 		"""
 		select(self.errorNodes)
-'''
+		for i in  (self.errorNodes):
+			print i
+# '''
+# '''
+class CheckRealReferences(CheckMayaAbstract):
+	"""@brief Check for unknown nodes.
+	"""
+	_name = "Check if References call external files"
+	_category = "Scene"
+
+	_asSelection = True
+	_asFix = True
+
+	def check(self):
+		"""@brief Check for unknown node and add them to errors node.
+		"""
+		ListRefs = cmds.ls(type = 'reference')
+		NoFiles = []
+		for iRef in ListRefs:
+			try:
+				# print cmds.referenceQuery(iRef, f=True)
+				cmds.referenceQuery(iRef, f=True)
+			except:
+				NoFiles.append(iRef)
+		self.errorNodes = NoFiles
+		if not NoFiles:
+			self.status = "OK"
+		if NoFiles:
+			self.status = self.errorMode
+			self.errorNodes = NoFiles
+			self.errorMessage = "%s are non unique" % (len(NoFiles))
+			
+	def fix(self):
+		"""@brief rename shape 
+		"""
+		# for i in self.errorNodes:
+		NoFiles = self.errorNodes
+		for a in NoFiles:
+			cmds.lockNode(a, l = False)
+			cmds.delete(a)
+		self.run()
+		
+	def select(self):
+		"""@brief Select the error nodes.
+		"""
+		select(self.errorNodes)
+		for i in  (self.errorNodes):
+			print i
+
+# '''
